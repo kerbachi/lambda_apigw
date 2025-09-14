@@ -167,3 +167,9 @@ To add a new Lambda function:
 3. Run `terraform apply`
 
 The existing function1 has been migrated to this new structure and maintains the same functionality while being properly isolated in the dev/prod environments.
+
+## TODO
+
+1. Add API GW + integration
+2. DevOps Azure
+3. Store credentials
