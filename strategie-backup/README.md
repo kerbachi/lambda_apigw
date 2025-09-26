@@ -29,6 +29,7 @@ Les sauvegardes test, dev, prod seront sepéparés. Idéalement, les sauvegardes
 
 - AWS Backup Audit Manager pour preuves de conformité.
 - AWS Config/Drift detection de L.infrastructure et sa configuration peut être détecté par IaC.
+- Utiliser **Vault Lock compliance** en prod
 
 ## Architecture de sauvegarde
 
@@ -118,6 +119,12 @@ Le backup de S3 est supporté par **AWS Backup**. La réplication de S3 est une 
 - Restauration:
   - Sera possible avec le re-déploiement via pipeline/IaC + réassociation des versions/aliases.
 
+3. **QuickSight**
+
+QuickSight étant un service managé BI, on ne “sauvegarde” pas des serveurs ou une base locale, mais les artefacts (dashboards, analyses, datasets, data sources, thèmes, dossiers) et leur configuration.
+
+Méthode recommandée: **Asset Bundles** (export/import d’actifs): Exporter un bundle d’actifs (dashboards, analyses, datasets, data sources, thèmes, etc.) dans un fichier portable, puis l’importer pour restaurer ou cloner (dans le même compte, autre compte, ou autre région).
+
 ## Rétention et conformité
 
 - Par environnement:
@@ -133,17 +140,15 @@ Le backup de S3 est supporté par **AWS Backup**. La réplication de S3 est une 
 ## Organisation et automatisation
 
 - Séparation des comptes test, dev et production avec des retentions différentes
+- Rétention doit être configurée différement selon l'environnement
 - Utilisation des balises (tags) pour automatiser la sauvegarde. Example de balises:
   - backup:enabled=true
-  - backup:tier=gold|silver|bronze
-  - backup:rpo_minutes=15|60
-  - backup:rto_minutes=120|240
+  - backup:tier=lab|dev|prod
   - backup:retention_days=35|90
-  - backup:copy_to_region=ca-central-1,us-east-2
+  - backup:copy_to_region=ca-central-1,ca-central-2
   - backup:copy_to_account=123456789012
   - data:classification=public|internal|confidential|restricted
-  - owner, env=dev|test|prod, application=pgf
-- Outils: AWS Backup
+  - application=pgf
 
 ## Opérations et runbooks
 
@@ -165,7 +170,18 @@ Le backup de S3 est supporté par **AWS Backup**. La réplication de S3 est une 
 - Configurer des vaults séparés par criticité (Fichiers focus pré et post traitement par example)
 - Appliquer AWS Backup Vault Lock pour la conformité
 
-Liens:
+## Mile Stone
+
+| Étape # | Ressource AWS | Description                                                                 |
+| ------- | ------------- | --------------------------------------------------------------------------- |
+| Étape 1 | AWS Backup    | Configuration de de AWS Backup (Plans de backup + ressources à sauvegarder) |
+| Étape 2 | S3            | Préparer S3 et ajouter sauvegrade de S3                                     |
+| Étape 3 | RDS           | Créer la sauvegarde de RDS                                                  |
+| Étape 4 | QuickSight    | Créer des jeux d'Asset Bundle de QuickSight                                 |
+
+## Liens:
 
 - Sauvegarde S3: (https://docs.aws.amazon.com/aws-backup/latest/devguide/s3-backups.html
 - Sauvegarde RDS: https://docs.aws.amazon.com/aws-backup/latest/devguide/rds-backup.html
+- AWS Backup Vault: https://docs.aws.amazon.com/fr_fr/aws-backup/latest/devguide/vaults.html
+- QuickSight Asset Bundle: https://docs.aws.amazon.com/fr_fr/quicksight/latest/developerguide/asset-bundle-ops.html
