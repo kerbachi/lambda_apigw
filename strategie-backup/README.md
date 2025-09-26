@@ -23,23 +23,23 @@ Les sauvegardes test, dev, prod seront sepéparés. Idéalement, les sauvegardes
 
 ### 3. Séparation des résponsabilités
 
-Équipe opérationnel Backup vs. équipes applicatives; accès restreint aux coffres (least privilege).
+Équipe opérationnel Backup vs équipes applicatives; accès restreint aux coffres (least privilege).
 
 ### 4. Conformité et audit
 
 - AWS Backup Audit Manager pour preuves de conformité.
-- AWS Config/Drift detection pour IaC.
+- AWS Config/Drift detection de L.infrastructure et sa configuration peut être détecté par IaC.
 
 ## Architecture de sauvegarde
 
 - Coffres (Backup Vaults):
 
-  - Un coffre par criticité (ex: vault-gold, vault-silver), séparés par environnement et région.
+  - Un coffre par criticité (ex: lab, dev et prod), séparés par environnement et région.
   - Activer AWS Backup Vault Lock ( [idéalement en mode conformité pour prod](https://docs.aws.amazon.com/fr_fr/aws-backup/latest/devguide/vault-lock.html) ).
 
 - Copies inter-comptes:
 
-  - Le backup devrait [etre sauvegard/ dans un autre compte AWS, et id/alement une autre région si c'est possible.
+  - Le backup devrait [etre sauvegardé dans un autre compte AWS, et idéalement une autre région si c'est possible.
 
 - Chiffrement:
 
@@ -84,25 +84,27 @@ Composant contenant des données nécessitant une étape supplémentaire pour sa
 
 2. **S3**
 
-- Protection:
-  - Activer Versioning sur les buckets critiques.
-  - Chiffrement SSE-KMS par défaut.
-  - S3 Object Lock (Governance ou Compliance) sur le bucket de sauvegarde dans le compte Backup.
-- Réplication et sauvegarde:
+2.1. AWS Backup pour S3
 
-  - CRR (Cross-Region Replication), **si possible**, vers le compte Backup pour buckets critiques (Par example prod).
-    Sinon réplication vers un autre compte AWS du même organisation AWS
+Le backup de S3 est supporté par **AWS Backup**. La réplication de S3 est une solution potentielle, mais présente ces inconvénients:
+
+- La réplication n’est pas une sauvegarde: elle réplique aussi les suppressions et écrasements; elle ne fournit pas de points de restauration immuables ni de rétention contrôlée. En cas d’erreur ou ransomware, l’erreur est simplement répliquée.
+
+- AWS Backup crée des points de restauration (recovery points) dans des coffres dédiés (Backup Vaults) avec politiques de rétention, immutabilité via Vault Lock, et copies inter-comptes/inter-régions gérées. C’est centralisé, auditable (Backup Audit Manager) et cohérent avec les autres services (RDS, DynamoDB, etc.).
+
+- Gouvernance/Conformité: politiques d’organisation (Organizations Backup Policies), tagging, preuves d’audit, séparation des rôles et du stockage (coffres) pour un modèle de moindre privilège.
+
+  2.2 Protection de S3 avec AWS Backup (Pré-requis)
+
+  - Activer Versioning sur les buckets critiques.
+  - Chiffrement (SSE-KMS par défaut).
+  - Bloquer l'accès publique, et appliquer S3 policy pour renforcer un accèes stricte au contenue du bucket S3.
+  - Laisser juste les objects à sauvegrader dans le bucket, car AWS Backup, au moment d'écrire de ce document, ne supporte pas la sauvegarde séléctive d'objects à l'intérieur de S3
+
+- Point à considérer ultérieurement pour optimiser les coûts:
 
   - Lifecycle: Transition vers Glacier/Deep pour archivage
   - Object Lock + Vault Lock.
-
-- Contrôles:
-
-  - Blouer accèes publique, et appliquer S3 policy pour renforcer un accèes stricte au contenue du bucket S3.
-
-- Copies:
-
-  - Inter-comptes (compte Backup) et inter-régions automatiques selon tier.
 
 3. **Lambda et Glue**
 
@@ -160,9 +162,10 @@ Composant contenant des données nécessitant une étape supplémentaire pour sa
 ## Idéale si c'est réalisable
 
 - Créer des plans de backup multi-région
-- Configurer des vaults séparés par criticité
+- Configurer des vaults séparés par criticité (Fichiers focus pré et post traitement par example)
 - Appliquer AWS Backup Vault Lock pour la conformité
 
-# TO ASK:
+Liens:
 
-Suggere des amélioration pour notre stratégie de backup. Au besoin, réorganise les section pour rendre la stratégie coherante.
+- Sauvegarde S3: (https://docs.aws.amazon.com/aws-backup/latest/devguide/s3-backups.html
+- Sauvegarde RDS: https://docs.aws.amazon.com/aws-backup/latest/devguide/rds-backup.html
